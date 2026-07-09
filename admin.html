@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LiveTranslate Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d1420;--panel:#161f30;--panel-2:#1d2942;--line:#293349;
+  --text:#eef2f8;--text-dim:#8b96ab;--teal:#4fd1c5;--amber:#f2a65a;
+  --danger:#e2586b;--green:#48bb78;--purple:#9f7aea;--radius:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);font-family:'Manrope',system-ui,sans-serif;min-height:100dvh;}
+h1,h2,h3,.brand{font-family:'Space Grotesk',system-ui,sans-serif;}
+
+/* ── LOGIN ── */
+#loginScreen{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100dvh;padding:24px;
+  background:radial-gradient(circle at 20% 20%,rgba(79,209,197,.12),transparent 50%),
+             radial-gradient(circle at 80% 80%,rgba(242,166,90,.10),transparent 50%),var(--bg);
+}
+.login-card{
+  width:100%;max-width:380px;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:24px;padding:36px 28px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.login-icon{font-size:48px;text-align:center;margin-bottom:16px;}
+.login-title{font-size:24px;font-weight:700;text-align:center;margin-bottom:6px;}
+.login-sub{font-size:13px;color:var(--text-dim);text-align:center;margin-bottom:28px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:11px;color:var(--text-dim);font-weight:700;
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.field input{
+  width:100%;padding:13px 16px;border-radius:12px;
+  border:1px solid var(--line);background:var(--panel-2);
+  color:var(--text);font-size:15px;font-family:inherit;outline:none;
+  transition:border-color .2s;
+}
+.field input:focus{border-color:var(--teal);}
+.field input.error{border-color:var(--danger);}
+.btn{
+  width:100%;padding:14px;border-radius:12px;border:none;
+  font-size:15px;font-weight:700;font-family:'Manrope',sans-serif;
+  cursor:pointer;transition:transform .1s,box-shadow .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--teal);color:#08221f;box-shadow:0 4px 18px rgba(79,209,197,.3);}
+.btn-primary:hover{box-shadow:0 6px 24px rgba(79,209,197,.45);}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-sm{
+  padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;
+  border:none;cursor:pointer;font-family:'Manrope',sans-serif;
+  transition:transform .1s,opacity .15s;flex-shrink:0;
+}
+.btn-sm:active{transform:scale(.95);}
+.btn-sm.save{background:var(--teal);color:#08221f;}
+.btn-sm.del{background:rgba(226,88,107,.2);color:var(--danger);border:1px solid rgba(226,88,107,.4);}
+.btn-sm.del:hover{background:var(--danger);color:#fff;}
+.err-msg{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;min-height:18px;}
+.setup-msg{font-size:12px;color:var(--text-dim);text-align:center;margin-top:14px;line-height:1.6;}
+
+/* ── ADMIN LAYOUT ── */
+#adminScreen{display:none;min-height:100dvh;}
+.admin-wrap{max-width:960px;margin:0 auto;padding:24px 20px 60px;}
+
+/* ── TOPBAR ── */
+.admin-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 0 24px;border-bottom:1px solid var(--line);margin-bottom:28px;
+}
+.admin-brand{font-size:20px;font-weight:700;}
+.admin-brand span{color:var(--teal);}
+.topbar-right{display:flex;gap:10px;align-items:center;}
+.tag{
+  padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;
+  font-family:'Manrope',sans-serif;
+}
+.tag.green{background:rgba(72,187,120,.15);color:var(--green);border:1px solid rgba(72,187,120,.35);}
+.tag.red{background:rgba(226,88,107,.15);color:var(--danger);border:1px solid rgba(226,88,107,.35);}
+.tag.amber{background:rgba(242,166,90,.15);color:var(--amber);border:1px solid rgba(242,166,90,.35);}
+.icon-btn{
+  background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+  padding:8px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;
+  font-family:'Manrope',sans-serif;transition:background .15s;
+}
+.icon-btn:hover{background:var(--line);}
+
+/* ── SECTION ── */
+.section{margin-bottom:32px;}
+.section-head{
+  display:flex;align-items:center;gap:10px;margin-bottom:16px;
+  padding-bottom:10px;border-bottom:1px solid var(--line);
+}
+.section-head h2{font-size:17px;font-weight:700;}
+.section-head .badge{
+  background:var(--panel-2);border:1px solid var(--line);
+  padding:3px 10px;border-radius:12px;font-size:12px;color:var(--text-dim);
+}
+
+/* ── STATUS CARDS ── */
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+.stat-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:16px 18px;
+}
+.stat-card .s-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.stat-card .s-val{font-size:26px;font-weight:800;font-family:'Space Grotesk',monospace;}
+.stat-card .s-sub{font-size:11px;color:var(--text-dim);margin-top:3px;}
+.stat-card.green-card{border-color:rgba(72,187,120,.3);background:rgba(72,187,120,.06);}
+.stat-card.amber-card{border-color:rgba(242,166,90,.3);background:rgba(242,166,90,.06);}
+.stat-card.red-card{border-color:rgba(226,88,107,.3);background:rgba(226,88,107,.06);}
+.stat-card.teal-card{border-color:rgba(79,209,197,.3);background:rgba(79,209,197,.06);}
+
+/* ── KEY CARDS ── */
+.key-grid{display:flex;flex-direction:column;gap:12px;}
+.key-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:16px 18px;transition:border-color .2s;
+}
+.key-card.active-key{border-color:rgba(79,209,197,.5);background:rgba(79,209,197,.04);}
+.key-card.exhausted-key{border-color:rgba(226,88,107,.4);background:rgba(226,88,107,.04);}
+.key-card.error-key{border-color:rgba(242,166,90,.4);background:rgba(242,166,90,.04);}
+.key-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.key-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--panel-2);border:1px solid var(--line);
+  font-size:12px;font-weight:700;color:var(--text-dim);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.key-label-input{
+  flex:1;padding:5px 10px;border-radius:8px;border:1px solid var(--line);
+  background:transparent;color:var(--text-dim);font-size:12px;font-weight:600;
+  font-family:'Manrope',sans-serif;outline:none;min-width:0;
+}
+.key-label-input:focus{border-color:var(--teal);color:var(--text);}
+.key-status-badge{
+  padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;
+  white-space:nowrap;flex-shrink:0;
+}
+.key-status-badge.ok{background:rgba(72,187,120,.15);color:var(--green);}
+.key-status-badge.exhausted{background:rgba(226,88,107,.15);color:var(--danger);}
+.key-status-badge.empty{background:var(--panel-2);color:var(--text-dim);}
+.key-status-badge.error{background:rgba(242,166,90,.15);color:var(--amber);}
+.key-status-badge.active{background:rgba(79,209,197,.15);color:var(--teal);}
+.key-input-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.key-api-input{
+  flex:1;padding:9px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--text);font-size:13px;
+  font-family:'Space Grotesk',monospace;outline:none;transition:border-color .2s;min-width:0;
+}
+.key-api-input:focus{border-color:var(--teal);}
+.key-api-input::placeholder{color:var(--text-dim);font-family:'Manrope',sans-serif;font-size:12px;}
+
+/* Progress bar */
+.prog-wrap{margin-top:6px;}
+.prog-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:5px;}
+.prog-bar{height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.prog-fill.ok{background:linear-gradient(90deg,var(--teal),var(--green));}
+.prog-fill.warn{background:linear-gradient(90deg,var(--amber),#f97316);}
+.prog-fill.full{background:linear-gradient(90deg,var(--danger),#c0283e);}
+.key-error-msg{font-size:11px;color:var(--amber);margin-top:6px;}
+
+/* ── LOG ── */
+.log-box{
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:16px;max-height:240px;overflow-y:auto;
+  font-family:'Space Grotesk',monospace;font-size:12px;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+}
+.log-entry{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.log-entry .log-time{color:var(--text-dim);}
+.log-entry .log-ok{color:var(--green);}
+.log-entry .log-warn{color:var(--amber);}
+.log-entry .log-err{color:var(--danger);}
+.log-entry .log-info{color:var(--teal);}
+
+/* ── CALL LINK ── */
+.call-link-box{
+  background:linear-gradient(135deg,rgba(79,209,197,.1),rgba(159,122,234,.08));
+  border:1px solid rgba(79,209,197,.3);border-radius:16px;
+  padding:20px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+}
+.call-link-text{font-size:14px;color:var(--text-dim);}
+.call-link-text strong{display:block;font-size:16px;color:var(--text);margin-bottom:3px;}
+
+/* ── CHANGE PW ── */
+.pw-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+.pw-row .field{flex:1;min-width:160px;margin-bottom:0;}
+
+/* ── PING INDICATOR ── */
+.ping-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);}
+.ping-dot{width:10px;height:10px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:background .3s;}
+.ping-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+.ping-dot.bad{background:var(--danger);}
+.ping-dot.pinging{background:var(--amber);animation:pingPulse .8s infinite;}
+@keyframes pingPulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+@media(max-width:600px){
+  .key-input-row{flex-wrap:wrap;}
+  .key-api-input{min-width:0;width:100%;}
+  .call-link-box{flex-direction:column;}
+  .pw-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-icon">🔐</div>
+    <div class="login-title">Admin belépés</div>
+    <div class="login-sub">LiveTranslate Call — vezérlőpult</div>
+
+    <div class="field">
+      <label>Jelszó</label>
+      <input type="password" id="pwInput" placeholder="Admin jelszó">
+    </div>
+    <button class="btn btn-primary" id="loginBtn">🔑 Belépés</button>
+    <div class="err-msg" id="loginErr"></div>
+
+    <div class="setup-msg" id="setupMsg" style="display:none;">
+      Első belépés — add meg a kívánt admin jelszót:<br>
+      <small style="color:var(--danger)">Ezt a jelszót biztonságos helyen tárold!</small>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     ADMIN SCREEN
+══════════════════════════════════ -->
+<div id="adminScreen">
+  <div class="admin-wrap">
+
+    <!-- TOPBAR -->
+    <div class="admin-topbar">
+      <div class="admin-brand">LiveTranslate <span>Admin</span></div>
+      <div class="topbar-right">
+        <div class="ping-row">
+          <div class="ping-dot" id="pingDot"></div>
+          <span id="pingLabel">Ellenőrzés…</span>
+        </div>
+        <span class="tag" id="groqStatusTag">–</span>
+        <button class="icon-btn" id="pingNowBtn">🔄 Ping</button>
+        <button class="icon-btn" id="logoutBtn">🚪 Kilépés</button>
+      </div>
+    </div>
+
+    <!-- STATUS KÁRTYÁK -->
+    <div class="section">
+      <div class="section-head">
+        <h2>📊 Valós idejű összesítő</h2>
+        <span class="badge" id="lastPingBadge">–</span>
+      </div>
+      <div class="status-grid">
+        <div class="stat-card teal-card">
+          <div class="s-label">Groq fordítások ma</div>
+          <div class="s-val" id="statTodayTotal">0</div>
+          <div class="s-sub">összes kulcson</div>
+        </div>
+        <div class="stat-card green-card">
+          <div class="s-label">Elérhető kérések</div>
+          <div class="s-val" id="statRemaining">0</div>
+          <div class="s-sub">mai nap végéig</div>
+        </div>
+        <div class="stat-card">
+          <div class="s-label">Aktív kulcsok</div>
+          <div class="s-val" id="statActiveKeys">0</div>
+          <div class="s-sub">10-ből</div>
+        </div>
+        <div class="stat-card" id="qualityCard">
+          <div class="s-label">Fordítás minősége</div>
+          <div class="s-val" id="statQuality">–</div>
+          <div class="s-sub" id="statQualitySub">–</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROQ API KULCSOK -->
+    <div class="section">
+      <div class="section-head">
+        <h2>🔑 Groq API kulcsok</h2>
+        <span class="badge">Max 10 kulcs · 1000 kérés/kulcs/nap</span>
+      </div>
+      <div class="key-grid" id="keyGrid">
+        <!-- JS tölti fel -->
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="addKeyBtn" style="max-width:200px;">
+          ➕ Új kulcs hozzáadása
+        </button>
+        <button class="btn-sm save" id="saveAllBtn" style="padding:10px 20px;border-radius:10px;">
+          💾 Összes mentése
+        </button>
+        <button class="btn-sm del" id="resetCountersBtn" style="padding:10px 20px;border-radius:10px;">
+          🔁 Számlálók reset
+        </button>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="section">
+      <div class="section-head">
+        <h2>📋 Eseménynapló</h2>
+        <button class="icon-btn" id="clearLogBtn" style="font-size:12px;padding:5px 10px;">🗑 Törlés</button>
+      </div>
+      <div class="log-box" id="logBox"></div>
+    </div>
+
+    <!-- JELSZÓ VÁLTÁS -->
+    <div class="section">
+      <div class="section-head"><h2>🔒 Admin jelszó változtatása</h2></div>
+      <div class="pw-row">
+        <div class="field">
+          <label>Jelenlegi jelszó</label>
+          <input type="password" id="oldPw" placeholder="Jelenlegi jelszó">
+        </div>
+        <div class="field">
+          <label>Új jelszó</label>
+          <input type="password" id="newPw" placeholder="Új jelszó (min 6 karakter)">
+        </div>
+        <div class="field">
+          <label>Megerősítés</label>
+          <input type="password" id="newPw2" placeholder="Újra az új jelszó">
+        </div>
+        <button class="btn-sm save" id="changePwBtn" style="padding:10px 20px;border-radius:10px;margin-bottom:0;">
+          Mentés
+        </button>
+      </div>
+      <div class="err-msg" id="pwChangeErr" style="text-align:left;margin-top:8px;"></div>
+    </div>
+
+    <!-- LINK A HÍVÁS KÉPERNYŐHÖZ -->
+    <div class="section">
+      <div class="call-link-box">
+        <div class="call-link-text">
+          <strong>📞 Vissza a hívás képernyőre</strong>
+          Minden beállítás mentve — a hívás bármikor elindítható.
+        </div>
+        <a href="index.html" style="text-decoration:none;">
+          <button class="btn btn-primary" style="width:auto;padding:12px 24px;">
+            Hívás megnyitása →
+          </button>
+        </a>
+      </div>
+    </div>
+
+  </div><!-- /admin-wrap -->
+</div><!-- /adminScreen -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  KONFIGURÁCIÓ
+// ═══════════════════════════════════════════════════════════════════
+
+const EDGE_FUNCTION_URL =
+  "https://yyexlblyepkxyqqbgpvu.supabase.co/functions/v1/groq-translate";
+
+const DAILY_LIMIT = 1000;
+const PW_KEY      = "lt_admin_pw";
+const KEYS_KEY    = "lt_groq_keys";
+const LOG_KEY     = "lt_admin_log";
+const RESET_KEY   = "lt_reset_date";
+
+// ═══════════════════════════════════════════════════════════════════
+//  SEGÉDFÜGGVÉNYEK
+// ═══════════════════════════════════════════════════════════════════
+
+function $(id){ return document.getElementById(id); }
+
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function hashStr(str){
+  // Egyszerű hash — nem titkosítás, csak obfuszkáció
+  // Élesben bcrypt/scrypt kellene szerveroldalon
+  let h=0;
+  for(let i=0;i<str.length;i++){
+    h=Math.imul(31,h)+str.charCodeAt(i)|0;
+  }
+  return h.toString(16);
+}
+
+function loadKeys(){
+  try{
+    const raw=localStorage.getItem(KEYS_KEY);
+    if(!raw) return [];
+    const arr=JSON.parse(raw);
+    if(!Array.isArray(arr)) return [];
+    return arr.map((k,i)=>({
+      key: k.key||"",
+      label: k.label||`Kulcs #${i+1}`,
+      used: Number(k.used)||0,
+      lastError: k.lastError||null,
+    }));
+  }catch{ return []; }
+}
+
+function saveKeys(keys){
+  localStorage.setItem(KEYS_KEY, JSON.stringify(keys.map(k=>({
+    key:k.key, label:k.label, used:k.used, lastError:k.lastError
+  }))));
+}
+
+// ─── LOG ────────────────────────────────────────────────────────────
+
+const MAX_LOG = 200;
+
+function loadLog(){
+  try{
+    const raw=localStorage.getItem(LOG_KEY);
+    return raw?JSON.parse(raw):[];
+  }catch{ return []; }
+}
+
+function saveLog(log){
+  try{ localStorage.setItem(LOG_KEY, JSON.stringify(log.slice(-MAX_LOG))); }catch{}
+}
+
+function addLog(type, msg){
+  const log=loadLog();
+  const entry={
+    time: new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"}),
+    type, msg
+  };
+  log.push(entry);
+  saveLog(log);
+  renderLog();
+}
+
+function renderLog(){
+  const box=$("logBox");
+  const log=loadLog();
+  box.innerHTML=log.slice(-100).reverse().map(e=>{
+    const cls=e.type==="ok"?"log-ok":e.type==="warn"?"log-warn":e.type==="err"?"log-err":"log-info";
+    return `<div class="log-entry"><span class="log-time">[${e.time}]</span> <span class="${cls}">${escHtml(e.msg)}</span></div>`;
+  }).join("");
+}
+
+function escHtml(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════════════════════════
+
+let isFirstSetup = false;
+
+function initLogin(){
+  const stored = localStorage.getItem(PW_KEY);
+  if(!stored){
+    isFirstSetup = true;
+    $("setupMsg").style.display="block";
+    $("loginBtn").textContent="🔑 Jelszó beállítása és belépés";
+  }
+}
+
+$("pwInput").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+$("loginBtn").onclick = doLogin;
+
+function doLogin(){
+  const pw = $("pwInput").value;
+  if(!pw){ $("loginErr").textContent="Add meg a jelszót!"; return; }
+  if(pw.length<4){ $("loginErr").textContent="Minimum 4 karakter szükséges!"; return; }
+
+  const stored = localStorage.getItem(PW_KEY);
+
+  if(isFirstSetup){
+    // Első beállítás
+    localStorage.setItem(PW_KEY, hashStr(pw));
+    $("loginErr").textContent="";
+    openAdmin();
+    addLog("info","Első belépés – admin jelszó beállítva.");
+    return;
+  }
+
+  if(hashStr(pw) !== stored){
+    $("loginErr").textContent="Helytelen jelszó!";
+    $("pwInput").classList.add("error");
+    setTimeout(()=>$("pwInput").classList.remove("error"),600);
+    return;
+  }
+
+  $("loginErr").textContent="";
+  openAdmin();
+}
+
+function openAdmin(){
+  $("loginScreen").style.display="none";
+  $("adminScreen").style.display="block";
+  maybeResetDaily();
+  renderKeyGrid();
+  updateStats();
+  renderLog();
+  startPolling();
+}
+
+$("logoutBtn").onclick=()=>{
+  $("adminScreen").style.display="none";
+  $("loginScreen").style.display="flex";
+  $("pwInput").value="";
+  stopPolling();
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  NAPI RESET
+// ═══════════════════════════════════════════════════════════════════
+
+function maybeResetDaily(){
+  const stored = localStorage.getItem(RESET_KEY);
+  const today  = todayStr();
+  if(stored === today) return;
+  localStorage.setItem(RESET_KEY, today);
+  const keys = loadKeys();
+  keys.forEach(k=>{ k.used=0; k.lastError=null; });
+  saveKeys(keys);
+  addLog("info", `Napi számlálók visszaállítva: ${today}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  KEY GRID MEGJELENÍTÉS
+// ═══════════════════════════════════════════════════════════════════
+
+function renderKeyGrid(){
+  const keys = loadKeys();
+  const grid = $("keyGrid");
+  grid.innerHTML="";
+
+  // Mindig 10 slot jelenik meg, üres slotok is
+  for(let i=0;i<10;i++){
+    const k = keys[i] || { key:"", label:`Kulcs #${i+1}`, used:0, lastError:null };
+    const pct    = Math.min(100, Math.round((k.used/DAILY_LIMIT)*100));
+    const remain = Math.max(0, DAILY_LIMIT - k.used);
+    const isExhausted = k.used >= DAILY_LIMIT;
+    const hasKey = !!k.key;
+    const hasError = !!k.lastError && !isExhausted;
+
+    // CSS osztály a kártyán
+    let cardClass = "key-card";
+    if(!hasKey) cardClass="key-card";
+    else if(isExhausted) cardClass="key-card exhausted-key";
+    else if(hasError) cardClass="key-card error-key";
+    else cardClass="key-card active-key";
+
+    // Badge szöveg
+    let badgeText, badgeClass;
+    if(!hasKey){ badgeText="Üres"; badgeClass="empty"; }
+    else if(isExhausted){ badgeText="Kimerült"; badgeClass="exhausted"; }
+    else if(hasError){ badgeText="Hiba"; badgeClass="error"; }
+    else{ badgeText="Aktív"; badgeClass="ok"; }
+
+    // Progressbar szín
+    let fillClass = "ok";
+    if(pct>=90) fillClass="full";
+    else if(pct>=70) fillClass="warn";
+
+    const div=document.createElement("div");
+    div.className=cardClass;
+    div.dataset.idx=i;
+    div.innerHTML=`
+      <div class="key-header">
+        <div class="key-num">${i+1}</div>
+        <input class="key-label-input" type="text" value="${escHtml(k.label)}"
+          placeholder="Leírás / fiók neve" data-role="label" data-idx="${i}">
+        <span class="key-status-badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="key-input-row">
+        <input class="key-api-input" type="password" value="${escHtml(k.key)}"
+          placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" data-role="apikey" data-idx="${i}"
+          autocomplete="off">
+        <button class="btn-sm save" data-role="save" data-idx="${i}" title="Mentés">💾</button>
+        <button class="btn-sm del"  data-role="del"  data-idx="${i}" title="Törlés">🗑</button>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-labels">
+          <span>Felhasznált: <b>${k.used}</b> / ${DAILY_LIMIT}</span>
+          <span>Marad: <b>${remain}</b></span>
+        </div>
+        <div class="prog-bar">
+          <div class="prog-fill ${fillClass}" style="width:${pct}%"></div>
+        </div>
+      </div>
+      ${k.lastError?`<div class="key-error-msg">⚠️ Utolsó hiba: ${escHtml(k.lastError)}</div>`:""}
+    `;
+    grid.appendChild(div);
+  }
+
+  // Eseménykezelők delegálása
+  grid.onclick=e=>{
+    const btn=e.target.closest("[data-role]");
+    if(!btn) return;
+    const idx=parseInt(btn.dataset.idx);
+    const role=btn.dataset.role;
+    if(role==="save") saveSingleKey(idx);
+    if(role==="del")  deleteSingleKey(idx);
+  };
+}
+
+function saveSingleKey(idx){
+  const card = $("keyGrid").querySelector(`[data-idx="${idx}"][data-role="apikey"]`);
+  const labelEl = $("keyGrid").querySelector(`[data-idx="${idx}"][data-role="label"]`);
+  if(!card) return;
+  const keyVal   = card.value.trim();
+  const labelVal = (labelEl?.value||"").trim()||`Kulcs #${idx+1}`;
+  const keys = loadKeys();
+  // Feltölti ha szükséges
+  while(keys.length<=idx) keys.push({key:"",label:`Kulcs #${keys.length+1}`,used:0,lastError:null});
+  keys[idx].key   = keyVal;
+  keys[idx].label = labelVal;
+  // Csak ha kulcs módosult, reseteli a számlálót
+  if(keyVal !== keys[idx].key) keys[idx].used=0;
+  keys[idx].lastError=null;
+  saveKeys(keys);
+  addLog(keyVal?"ok":"info", keyVal?`Kulcs #${idx+1} mentve (${labelVal}).`:`Kulcs #${idx+1} törölve.`);
+  renderKeyGrid();
+  updateStats();
+}
+
+function deleteSingleKey(idx){
+  if(!confirm(`Biztosan törölni szeretnéd a(z) ${idx+1}. kulcsot?`)) return;
+  const keys=loadKeys();
+  if(keys[idx]) keys[idx]={key:"",label:`Kulcs #${idx+1}`,used:0,lastError:null};
+  saveKeys(keys);
+  addLog("warn",`Kulcs #${idx+1} törölve.`);
+  renderKeyGrid();
+  updateStats();
+}
+
+$("addKeyBtn").onclick=()=>{
+  // Megkeresi az első üres slotot és fókuszál rá
+  const keys=loadKeys();
+  const emptyIdx=Array.from({length:10},(_,i)=>i).find(i=>!keys[i]?.key);
+  if(emptyIdx===undefined){
+    addLog("warn","Már 10 kulcs van beállítva – maximum elérve.");
+    return;
+  }
+  const card=$("keyGrid").querySelector(`[data-idx="${emptyIdx}"][data-role="apikey"]`);
+  if(card){
+    card.type="text"; // láthatóvá teszi a beíráshoz
+    card.focus();
+    card.type="password";
+  }
+};
+
+$("saveAllBtn").onclick=()=>{
+  const grid=$("keyGrid");
+  const keys=loadKeys();
+  let changed=0;
+  for(let i=0;i<10;i++){
+    const keyEl=grid.querySelector(`[data-idx="${i}"][data-role="apikey"]`);
+    const lblEl=grid.querySelector(`[data-idx="${i}"][data-role="label"]`);
+    if(!keyEl) continue;
+    while(keys.length<=i) keys.push({key:"",label:`Kulcs #${i+1}`,used:0,lastError:null});
+    const newKey=keyEl.value.trim();
+    const newLbl=(lblEl?.value||"").trim()||`Kulcs #${i+1}`;
+    if(newKey!==keys[i].key){ keys[i].used=0; keys[i].lastError=null; changed++; }
+    keys[i].key=newKey;
+    keys[i].label=newLbl;
+  }
+  saveKeys(keys);
+  addLog("ok",`Összes kulcs mentve (${changed} módosítás).`);
+  renderKeyGrid();
+  updateStats();
+};
+
+$("resetCountersBtn").onclick=()=>{
+  if(!confirm("Valóban visszaállítod az összes napi számlálót nullára?")) return;
+  const keys=loadKeys();
+  keys.forEach(k=>{ k.used=0; k.lastError=null; });
+  saveKeys(keys);
+  localStorage.setItem(RESET_KEY, todayStr());
+  addLog("info","Napi számlálók manuálisan resetelve.");
+  renderKeyGrid();
+  updateStats();
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  STATS FRISSÍTÉS
+// ═══════════════════════════════════════════════════════════════════
+
+function updateStats(){
+  const keys=loadKeys();
+  const activeKeys=keys.filter(k=>k.key&&k.used<DAILY_LIMIT);
+  const totalUsed=keys.reduce((s,k)=>s+(k.used||0),0);
+  const totalLimit=keys.filter(k=>k.key).length*DAILY_LIMIT;
+  const remaining=Math.max(0,totalLimit-totalUsed);
+
+  $("statTodayTotal").textContent=totalUsed;
+  $("statRemaining").textContent=remaining;
+  $("statActiveKeys").textContent=activeKeys.length;
+
+  // Minőség kártya
+  const usingFallback=!activeKeys.length;
+  $("statQuality").textContent=usingFallback?"MyMemory":"Groq AI";
+  $("statQualitySub").textContent=usingFallback?"Gyengébb minőség":"Kiváló minőség";
+  const qCard=$("qualityCard");
+  qCard.className="stat-card "+(usingFallback?"amber-card":"green-card");
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GROQ PING / POLLING
+// ═══════════════════════════════════════════════════════════════════
+
+let pollTimer=null;
+
+async function pingGroq(){
+  const keys=loadKeys();
+  const activeKey=keys.find(k=>k.key&&k.used<DAILY_LIMIT);
+
+  $("pingDot").className="ping-dot pinging";
+  $("pingLabel").textContent="Pingelés…";
+
+  if(!activeKey){
+    $("pingDot").className="ping-dot bad";
+    $("pingLabel").textContent="Nincs aktív kulcs";
+    $("groqStatusTag").textContent="Nincs kulcs";
+    $("groqStatusTag").className="tag red";
+    $("lastPingBadge").textContent="– nincs kulcs –";
+    addLog("warn","Ping: nincs aktív Groq kulcs.");
+    return;
+  }
+
+  try{
+    const res=await fetch(EDGE_FUNCTION_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-groq-key":activeKey.key},
+      body:JSON.stringify({text:"ok",src:"en",tgt:"en"}),
+      signal:AbortSignal.timeout(10000)
+    });
+    const ok=res.ok||res.status===200;
+    const time=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    if(ok){
+      $("pingDot").className="ping-dot ok";
+      $("pingLabel").textContent="Groq elérhető";
+      $("groqStatusTag").textContent="✅ Groq aktív";
+      $("groqStatusTag").className="tag green";
+      $("lastPingBadge").textContent=`Utolsó ping: ${time}`;
+      addLog("ok",`Groq ping sikeres (${time}) — kulcs: ${activeKey.label}`);
+    }else{
+      throw new Error(`HTTP ${res.status}`);
+    }
+  }catch(err){
+    $("pingDot").className="ping-dot bad";
+    $("pingLabel").textContent="Groq nem elérhető";
+    $("groqStatusTag").textContent="❌ Groq le";
+    $("groqStatusTag").className="tag red";
+    addLog("err",`Groq ping hiba: ${String(err).slice(0,80)}`);
+  }
+}
+
+function startPolling(){
+  pingGroq();
+  pollTimer=setInterval(()=>{
+    maybeResetDaily();
+    pingGroq();
+    renderKeyGrid();
+    updateStats();
+  },30000);
+}
+
+function stopPolling(){
+  if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
+}
+
+$("pingNowBtn").onclick=pingGroq;
+
+// ═══════════════════════════════════════════════════════════════════
+//  JELSZÓ VÁLTÁS
+// ═══════════════════════════════════════════════════════════════════
+
+$("changePwBtn").onclick=()=>{
+  const oldPw=$("oldPw").value;
+  const newPw=$("newPw").value;
+  const newPw2=$("newPw2").value;
+  const errEl=$("pwChangeErr");
+
+  if(!oldPw||!newPw||!newPw2){ errEl.textContent="Töltsd ki az összes mezőt!"; return; }
+  if(hashStr(oldPw)!==localStorage.getItem(PW_KEY)){ errEl.textContent="Helytelen jelenlegi jelszó!"; return; }
+  if(newPw.length<6){ errEl.textContent="Az új jelszó minimum 6 karakter!"; return; }
+  if(newPw!==newPw2){ errEl.textContent="A két jelszó nem egyezik!"; return; }
+
+  localStorage.setItem(PW_KEY,hashStr(newPw));
+  errEl.style.color="var(--green)";
+  errEl.textContent="✅ Jelszó sikeresen megváltoztatva!";
+  $("oldPw").value=""; $("newPw").value=""; $("newPw2").value="";
+  addLog("ok","Admin jelszó megváltoztatva.");
+  setTimeout(()=>{ errEl.textContent=""; errEl.style.color="var(--danger)"; },3000);
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOG TÖRLÉS
+// ═══════════════════════════════════════════════════════════════════
+
+$("clearLogBtn").onclick=()=>{
+  if(!confirm("Törlöd az összes naplóbejegyzést?")) return;
+  localStorage.removeItem(LOG_KEY);
+  renderLog();
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+
+initLogin();
+</script>
+</body>
+</html>
