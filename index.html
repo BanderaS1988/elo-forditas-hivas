@@ -1398,70 +1398,71 @@ let livekitRoom = null;
 let livekitConnected = false;
 
 async function connectToLiveKit() {
+  console.log("───────────────────────────────────────────────────");
+  console.log("🔗 LIVEKIT KAPCSOLAT INDÍTÁSA");
+  console.log("───────────────────────────────────────────────────");
+  console.log("🌐 LiveKit URL:", LIVEKIT_URL);
+  console.log("🔑 API Key:", LIVEKIT_API_KEY);
+  console.log("🏠 Szoba:", roomId);
+  console.log("👤 Felhasználó:", myName);
+  console.log("───────────────────────────────────────────────────");
+  
   try {
-    console.log("🔄 LiveKit csatlakozás...");
-    
+    console.log("🔄 Token generálás...");
     const token = await generateLiveKitToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, roomId, myName);
-    console.log("🔑 Token generálva");
+    console.log("✅ Token generálva:", token);
     
+    console.log("🔄 LiveKit room létrehozása...");
     livekitRoom = new LivekitRoom();
+    console.log("✅ Room objektum kész");
     
+    console.log("🔄 Kapcsolódás a LiveKit szerverhez...");
     await livekitRoom.connect(LIVEKIT_URL, token);
     livekitConnected = true;
-    console.log("✅ LiveKit csatlakozva!");
-
+    console.log("✅✅✅ LIVEKIT KAPCSOLAT SIKERES! ✅✅✅");
+    console.log("───────────────────────────────────────────────────");
+    
     if (localStream) {
+      console.log("📹 Saját track-ek publikálása...");
       for (const track of localStream.getTracks()) {
         try {
           await livekitRoom.localParticipant.publishTrack(track);
-          console.log("📹 Track publikálva:", track.kind);
+          console.log("   ✅ Track publikálva:", track.kind, "(aktív)");
         } catch (e) {
-          console.warn("Track publikálási hiba:", e);
+          console.warn("   ⚠️ Track publikálási hiba:", track.kind, e);
         }
       }
     }
-
+    
+    // Események logolása
     livekitRoom.on("participantConnected", (participant) => {
-      console.log("👤 Új résztvevő:", participant.identity);
-      updateParticipantsPanel();
+      console.log("👤 Új résztvevő csatlakozott:", participant.identity);
     });
-
+    
     livekitRoom.on("participantDisconnected", (participant) => {
       console.log("👤 Résztvevő kilépett:", participant.identity);
-      updateParticipantsPanel();
     });
-
+    
     livekitRoom.on("trackSubscribed", (track, publication, participant) => {
       console.log("📡 Track fogadva:", track.kind, "résztvevő:", participant.identity);
-      
       if (track.kind === "video") {
-        const videoElement = document.getElementById("remoteVideo");
-        if (videoElement) {
-          track.attach(videoElement);
-          splitRemoteVideo.srcObject = videoElement.srcObject;
-          splitWaiting.style.display = "none";
-        }
+        console.log("   📹 Videó track csatolva a remoteVideo elemhez");
       }
     });
-
+    
     livekitRoom.on("trackUnsubscribed", (track, publication, participant) => {
       console.log("📡 Track eltűnt:", track.kind, "résztvevő:", participant.identity);
     });
-
+    
     livekitRoom.on("connectionStateChanged", (state) => {
-      console.log("🔗 Kapcsolat állapot:", state);
-      if (state === "connected") {
-        setNetStatus("good");
-      } else if (state === "disconnected") {
-        setNetStatus("bad");
-        livekitConnected = false;
-      } else if (state === "connecting") {
-        setNetStatus("warn");
-      }
+      console.log("🔗 LiveKit kapcsolat állapot:", state);
     });
-
+    
   } catch (error) {
-    console.error("❌ LiveKit kapcsolódási hiba:", error);
+    console.error("❌❌❌ LIVEKIT KAPCSOLATI HIBA ❌❌❌");
+    console.error("   Hibakód:", error.code || "ismeretlen");
+    console.error("   Üzenet:", error.message || error);
+    console.error("   Részletek:", error);
     livekitConnected = false;
     throw error;
   }
@@ -1996,18 +1997,46 @@ function setupDataChannel(dc, peerId){
    SUPABASE CSATORNA — MULTI-PEER JELZÉS
    ========================================================================= */
 async function setupChannel(code){
+  console.log("═══════════════════════════════════════════════════");
+  console.log("📡 SUPABASE CSATORNA BEÁLLÍTÁSA");
+  console.log("═══════════════════════════════════════════════════");
+  console.log("🏠 Szoba kód:", code);
+  console.log("🆔 Peer ID:", myPeerId);
+  console.log("───────────────────────────────────────────────────");
+
+  console.log("🔄 Csatorna létrehozása: call-room-" + code);
   channel = supabaseClient.channel("call-room-"+code, {
     config:{ broadcast:{self:false}, presence:{key:myPeerId} }
   });
+  console.log("✅ Csatorna objektum kész");
 
-  channel.on("broadcast", {event:"signal"}, ({payload})=> handleSignal(payload));
-  channel.on("broadcast", {event:"caption"}, ({payload})=> handleIncomingCaption(payload));
-  channel.on("broadcast", {event:"chat"}, ({payload})=> handleIncomingChatBroadcast(payload));
-  channel.on("broadcast", {event:"reaction"}, ({payload})=> showEmojiFloat(payload.emoji, false));
+  console.log("📨 Eseményfigyelők beállítása...");
+  
+  channel.on("broadcast", {event:"signal"}, ({payload})=> {
+    console.log("   📨 Signal üzenet érkezett:", payload.kind, "from:", payload.from);
+    handleSignal(payload);
+  });
+  
+  channel.on("broadcast", {event:"caption"}, ({payload})=> {
+    console.log("   📨 Felirat érkezett:", payload.text?.slice(0,30) + (payload.text?.length > 30 ? "..." : ""));
+    handleIncomingCaption(payload);
+  });
+  
+  channel.on("broadcast", {event:"chat"}, ({payload})=> {
+    console.log("   📨 Chat üzenet érkezett:", payload.text?.slice(0,30) + (payload.text?.length > 30 ? "..." : ""));
+    handleIncomingChatBroadcast(payload);
+  });
+  
+  channel.on("broadcast", {event:"reaction"}, ({payload})=> {
+    console.log("   📨 Reakció érkezett:", payload.emoji);
+    showEmojiFloat(payload.emoji, false);
+  });
 
   channel.on("presence", {event:"sync"}, ()=>{
+    console.log("🔄 Presence szinkronizálás...");
     const state = channel.presenceState();
     const peerIds = Object.keys(state);
+    console.log("   👥 Résztvevők száma:", peerIds.length);
 
     // Résztvevők frissítése
     const presentPeerIds = new Set();
@@ -2019,6 +2048,7 @@ async function setupChannel(code){
         presentPeerIds.add(p.peerId||pid);
         // Ha ez egy új peer, kapcsolódunk hozzá
         if(!peers.has(p.peerId||pid)){
+          console.log("   👤 Új peer felismerve:", p.peerId||pid, "név:", p.name, "nyelv:", p.lang);
           initPeer(p.peerId||pid, p.name||"Partner", p.lang||"hu", true);
         } else {
           // Frissítjük a nevet/nyelvet
@@ -2034,30 +2064,45 @@ async function setupChannel(code){
 
     // Eltávozottak eltávolítása
     peers.forEach((_, pid)=>{
-      if(!presentPeerIds.has(pid)) removePeer(pid);
+      if(!presentPeerIds.has(pid)){
+        console.log("   👤 Peer eltávolítva:", pid);
+        removePeer(pid);
+      }
     });
 
     updateParticipantsPanel();
     updateSplitFromPeers();
+    console.log("   ✅ Presence szinkronizálás kész");
   });
 
   channel.on("presence", {event:"leave"}, ({leftPresences})=>{
+    console.log("   👤 Peer kilépés érzékelve:", leftPresences.length);
     leftPresences.forEach(p=>{
-      if(p.peerId) removePeer(p.peerId);
+      if(p.peerId) {
+        console.log("      👤 Kilépett:", p.peerId);
+        removePeer(p.peerId);
+      }
     });
     updateParticipantsPanel();
   });
 
+  console.log("🔄 Csatorna feliratkozás...");
   await channel.subscribe(async status=>{
+    console.log("   📡 Csatorna státusz:", status);
     if(status === "SUBSCRIBED"){
+      console.log("   ✅ Csatorna feliratkozva!");
+      console.log("   🏷️ Presence track indítása...");
       await channel.track({
         name: myName||"Guest",
         lang: myLang,
         peerId: myPeerId,
         initiator: isInitiator
       });
+      console.log("   ✅ Presence track elindítva");
+      console.log("───────────────────────────────────────────────────");
     }
   });
+  console.log("═══════════════════════════════════════════════════");
 }
 
 // Peer inicializálás (mi vagyunk az initiator)
@@ -2736,66 +2781,154 @@ async function togglePiP(){
    HÍVÁS VÉGE
    ========================================================================= */
 function doHangup(){
+  console.log("═══════════════════════════════════════════════════");
+  console.log("📞 HÍVÁS BEFEJEZÉSE (doHangup)");
+  console.log("═══════════════════════════════════════════════════");
+  
   callEnded = true;
+  console.log("✅ callEnded = true");
+  
+  console.log("🛑 Hangfelismerés leállítása...");
   stopRecognition();
-  if(statsInterval){ clearInterval(statsInterval); statsInterval=null; }
-  if(isRecording) toggleRecording();
-  if(isSharing) stopScreenShare();
+  console.log("   ✅ Hangfelismerés leállítva");
+  
+  if(statsInterval){ 
+    console.log("📊 Statisztika leállítása...");
+    clearInterval(statsInterval); 
+    statsInterval=null; 
+    console.log("   ✅ Statisztika leállítva");
+  }
+  
+  if(isRecording){ 
+    console.log("⏺ Felvétel leállítása...");
+    toggleRecording(); 
+    console.log("   ✅ Felvétel leállítva");
+  }
+  
+  if(isSharing){ 
+    console.log("🖥️ Képernyőmegosztás leállítása...");
+    stopScreenShare(); 
+    console.log("   ✅ Képernyőmegosztás leállítva");
+  }
+  
+  console.log("🔍 OCR leállítása...");
   stopOcr();
-  if(ocrWorker){ try{ ocrWorker.terminate(); }catch(_){} ocrWorker=null; }
+  if(ocrWorker){ 
+    try{ ocrWorker.terminate(); }catch(_){} 
+    ocrWorker=null; 
+  }
+  console.log("   ✅ OCR leállítva");
 
   // Minden peer lezárása
+  console.log("👥 Peerek lezárása (" + peers.size + " db)...");
   peers.forEach((p, pid)=>{
     try{ p.pc.close(); }catch(_){}
     if(p.cellEl) p.cellEl.remove();
   });
   peers.clear();
+  console.log("   ✅ Minden peer lezárva és eltávolítva");
+  
+  console.log("🔐 E2EE kulcsok törlése...");
   e2eePeerKeys.clear();
   e2eeCryptoKey = null;
   e2eeReady = false;
+  console.log("   ✅ E2EE kulcsok törölve");
+  
+  console.log("🔄 UI elemek visszaállítása...");
   multiGrid.innerHTML = "";
   ownGridCell = null;
+  console.log("   ✅ MultiGrid törölve");
 
-  if(channel){ supabaseClient.removeChannel(channel); channel=null; }
-  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+  if(channel){ 
+    console.log("📡 Supabase csatorna eltávolítása...");
+    supabaseClient.removeChannel(channel); 
+    channel=null; 
+    console.log("   ✅ Csatorna eltávolítva");
+  }
+  
+  if(localStream){ 
+    console.log("🎥 Helyi stream leállítása...");
+    localStream.getTracks().forEach(t=>t.stop()); 
+    localStream=null; 
+    console.log("   ✅ Helyi stream leállítva");
+  }
 
-  remoteVideo.srcObject    = null; localVideo.srcObject   = null;
-  splitLocalVideo.srcObject= null; splitRemoteVideo.srcObject=null;
+  console.log("🖥️ Videó elemek törlése...");
+  remoteVideo.srcObject    = null; 
+  localVideo.srcObject   = null;
+  splitLocalVideo.srcObject= null; 
+  splitRemoteVideo.srcObject=null;
   splitWaiting.style.display = "flex";
   multiGrid.style.display = "none";
+  console.log("   ✅ Videó elemek törölve");
 
+  console.log("🗑️ Gyorsítótár és chat törlése...");
   translateCache && translateCache.clear();
-  chatMessages.innerHTML=""; histList.innerHTML="";
+  chatMessages.innerHTML=""; 
+  histList.innerHTML="";
+  console.log("   ✅ Gyorsítótár és chat törölve");
+
+  console.log("🔄 Képernyőváltás (call -> setup)...");
   callScreen.classList.remove("active");
   setupScreen.classList.add("active");
+  console.log("   ✅ Képernyőváltás megtörtént");
+
+  console.log("🔧 UI elemek visszaállítása...");
   roomCodeDisplay.style.display="none";
   shareLinkBox.style.display="none";
   setupStatus.textContent = t("callEnded");
-  createRoomBtn.disabled=false; joinRoomBtn.disabled=false;
+  createRoomBtn.disabled=false; 
+  joinRoomBtn.disabled=false;
   recPill.style.display="none";
-  isRecording=false; isSharing=false; mirrored=false;
+  isRecording=false; 
+  isSharing=false; 
+  mirrored=false;
   ocrActive=false;
   hangupModal.classList.remove("open");
   statsGraphOverlay.classList.remove("open");
   participantsPanel.classList.remove("open");
+  console.log("   ✅ UI elemek visszaállítva");
 
   // URL paraméter eltávolítása
   if(window.history.replaceState){
     window.history.replaceState({}, document.title, window.location.pathname);
+    console.log("   ✅ URL paraméterek törölve");
   }
+  
+  console.log("═══════════════════════════════════════════════════");
+  console.log("✅ HÍVÁS BEFEJEZVE!");
+  console.log("═══════════════════════════════════════════════════");
 }
 
 /* =========================================================================
    HÍVÁS INDÍTÁSA
    ========================================================================= */
 async function beginCallFlow(){
+  console.log("═══════════════════════════════════════════════════");
+  console.log("📞 HÍVÁS INDÍTÁSA");
+  console.log("═══════════════════════════════════════════════════");
+  console.log("📝 Név:", myName);
+  console.log("🌐 Nyelv:", myLang, "(" + LANG_LABEL[myLang] + ")");
+  console.log("🏠 Szoba kód:", roomId);
+  console.log("🔑 Initiátor:", isInitiator ? "IGEN" : "NEM");
+  console.log("🆔 Peer ID:", myPeerId);
+  console.log("───────────────────────────────────────────────────");
+  
   callEnded = false;
   myPeerId = cryptoId();
   try{
+    console.log("🔌 Supabase kapcsolat inicializálása...");
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     window.supabaseClient = supabaseClient;
+    console.log("✅ Supabase kliens kész");
+    
+    console.log("🎥 Média inicializálása (kamera/mikrofon)...");
     await initMedia();
+    console.log("✅ Média kész (kamera és mikrofon elérhető)");
+    
+    console.log("📡 Csatorna beállítása a szobához...");
     await setupChannel(roomId);
+    console.log("✅ Csatorna kész");
 
     roomPill.textContent    = "Room: "+roomId;
     callCodeValue.textContent = roomId;
