@@ -144,6 +144,10 @@ select{
   display:flex;flex-direction:column;gap:1px;
   max-width:180px;
 }
+@media(min-width:720px){
+  #callNameBanner{ display:none; }
+  #partnerNameBanner{ display:none; }
+}
 .call-name-text{font-size:13px;font-weight:700;color:var(--teal);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .call-name-lang{font-size:11px;color:var(--text-dim);white-space:nowrap;}
 
@@ -577,11 +581,17 @@ select{
     <span class="call-code-value" id="callCodeValue">------</span>
   </div>
 
-  <!-- Name banner -->
-  <div class="call-name-banner" id="callNameBanner">
-    <span class="call-name-text" id="callNameText">—</span>
-    <span class="call-name-lang" id="callNameLang">Magyar</span>
-  </div>
+  <!-- Name banner — saját név bal felül -->
+<div class="call-name-banner" id="callNameBanner">
+  <span class="call-name-text" id="callNameText">—</span>
+  <span class="call-name-lang" id="callNameLang">Magyar</span>
+</div>
+
+<!-- Partner neve jobb felül -->
+<div class="call-name-banner" id="partnerNameBanner" style="left:auto;right:0;border-radius:0 0 0 14px;border-left:2px solid rgba(242,166,90,.4);border-right:none;background:linear-gradient(135deg,rgba(242,166,90,.05),rgba(242,166,90,.2));">
+  <span class="call-name-text" id="partnerNameText" style="color:var(--amber);">—</span>
+  <span class="call-name-lang" id="partnerNameLang" style="color:var(--text-dim);">--</span>
+</div>
 
   <!-- Remote video (mobile) -->
   <div class="vid-wrap" id="remoteWrap">
@@ -1571,10 +1581,16 @@ function setSplitIncomingCaption(main, sub, tagText){
   }
 }
 function updateSplitPartnerPresence(name, lang){
-  if(name) splitPartnerName.textContent = name;
+  if(name){
+    splitPartnerName.textContent = name;
+    const pnb = document.getElementById("partnerNameText");
+    if(pnb) pnb.textContent = name;
+  }
   if(lang){
     splitPartnerLang.textContent = LANG_TAG[lang]||lang.toUpperCase();
     splitWaiting.style.display = "none";
+    const pnl = document.getElementById("partnerNameLang");
+    if(pnl) pnl.textContent = LANG_LABEL[lang]||lang;
   }
 }
 
@@ -2083,6 +2099,11 @@ async function setupChannel(code){
   // Csak a nagyobb peerId kezdeményez, hogy elkerüljük a dupla offer-t
   const weAreInitiator = myPeerId > (p.peerId||pid);
   initPeer(p.peerId||pid, p.name||"Partner", p.lang||"hu", weAreInitiator);
+          updateSplitPartnerPresence(p.name||"Partner", p.lang||"hu");
+const pnb = document.getElementById("partnerNameText");
+if(pnb) pnb.textContent = p.name||"Partner";
+const pnl = document.getElementById("partnerNameLang");
+if(pnl) pnl.textContent = LANG_LABEL[p.lang||"hu"]||p.lang||"hu";
 } else {
           // Frissítjük a nevet/nyelvet
           const existing = peers.get(p.peerId||pid);
