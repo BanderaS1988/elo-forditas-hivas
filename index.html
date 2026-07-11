@@ -3070,8 +3070,8 @@ function doHangup(){
 
   console.log("🗑️ Gyorsítótár és chat törlése...");
   translateCache && translateCache.clear();
-  chatMessages.innerHTML=""; 
-  histList.innerHTML="";
+  chatMessages.innerHTML="";
+if(histList) histList.innerHTML="";
   console.log("   ✅ Gyorsítótár és chat törölve");
 
   console.log("🔄 Képernyőváltás (call -> setup)...");
