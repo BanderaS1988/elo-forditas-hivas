@@ -48,7 +48,7 @@ export class TranslatorEngine {
 
   // ─── PUBLIKUS API ────────────────────────────────────────────────────────────
 
-  async translate(text, src, tgt) {
+async translate(text, src, tgt) {
     if (!text || !text.trim()) return text;
     if (src === tgt) return text;
 
@@ -58,8 +58,9 @@ export class TranslatorEngine {
     }
 
     const cacheKey = `${src}|${tgt}|${text.trim()}`;
-    if (this._cache.has(cacheKey)) {
-      return this._cache.get(cacheKey);
+    const cached = this._getCache(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     this._maybeResetDaily();
@@ -93,6 +94,7 @@ export class TranslatorEngine {
     return fallback;
   }
 
+  
   async pingGroq() {
     const activeKey = this._getActiveKey();
     if (!activeKey) {
@@ -533,11 +535,49 @@ if (data.reset_date !== today) {
   }
 
   _setCache(key, value) {
-    // Cache méret korlátozás — legrégebbi törlése ha tele
-    if (this._cache.size >= MAX_CACHE_SIZE) {
-      const firstKey = this._cache.keys().next().value;
-      this._cache.delete(firstKey);
-    }
-    this._cache.set(key, value);
+  // Memória cache
+  if (this._cache.size >= MAX_CACHE_SIZE) {
+    const firstKey = this._cache.keys().next().value;
+    this._cache.delete(firstKey);
   }
+  this._cache.set(key, value);
+
+  // localStorage cache
+  try {
+    const raw = localStorage.getItem("lt_translate_cache");
+    const obj = raw ? JSON.parse(raw) : {};
+    const keys = Object.keys(obj);
+    // Ha tele van, töröljük a legrégebbiek felét
+    if (keys.length >= MAX_CACHE_SIZE) {
+      keys.slice(0, Math.floor(MAX_CACHE_SIZE / 2)).forEach(k => delete obj[k]);
+    }
+    obj[key] = value;
+    localStorage.setItem("lt_translate_cache", JSON.stringify(obj));
+  } catch(e) {
+    // localStorage tele vagy nem elérhető — csak memória cache marad
+    console.warn("[Translator] localStorage cache írási hiba:", e);
+  }
+}
+
+_getCache(key) {
+  // Először memória cache
+  if (this._cache.has(key)) {
+    return this._cache.get(key);
+  }
+  // Aztán localStorage cache
+  try {
+    const raw = localStorage.getItem("lt_translate_cache");
+    if (!raw) return undefined;
+    const obj = JSON.parse(raw);
+    if (obj[key] !== undefined) {
+      // Visszatöltjük memóriába is
+      this._cache.set(key, obj[key]);
+      return obj[key];
+    }
+  } catch(e) {
+    console.warn("[Translator] localStorage cache olvasási hiba:", e);
+  }
+  return undefined;
+}
+
 }
