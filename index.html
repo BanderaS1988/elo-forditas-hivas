@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> 
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
@@ -2590,13 +2590,22 @@ function startRecognition(){
     };
 
     recognition.onerror = e=>{
-      console.warn("STT hiba:",e.error);
-      micBtn.style.outline="2px solid var(--danger)";
-      if(e.error==="not-allowed"||e.error==="service-not-allowed"){
-        recognitionShouldRun=false;
-        micBtn.style.outline="";
-      }
-    };
+  console.warn("STT hiba:",e.error);
+  micBtn.style.outline="2px solid var(--danger)";
+  if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+    recognitionShouldRun=false;
+    micBtn.style.outline="";
+    return;
+  }
+  // Chrome Androidon network/audio hiba esetén újraindítás
+  if(e.error==="network"||e.error==="audio-capture"||e.error==="aborted"){
+    console.warn("STT újraindítás szükséges:", e.error);
+    micBtn.style.outline="";
+    if(recognitionShouldRun && micOn && !callEnded){
+      setTimeout(createAndStart, 1000);
+    }
+  }
+};
 
     recognition.onend = ()=>{
       micBtn.style.outline="";
