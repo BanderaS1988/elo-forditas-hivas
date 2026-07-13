@@ -642,14 +642,19 @@ select{
 
   
 
- <!-- History panel -->
+<!-- History panel -->
 <div id="historyPanel" style="display:none;position:absolute;left:14px;bottom:100px;z-index:7;background:rgba(13,20,32,.92);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:16px;padding:12px 14px;width:280px;max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <div id="historyPanelHead" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;cursor:grab;">
     <span style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;font-weight:700;">📝 Felirat előzmények</span>
-    <button onclick="document.getElementById('historyPanel').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;line-height:1;">✕</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span id="histSliderHint" style="font-size:12px;color:rgba(79,209,197,.6);animation:sliderHint 2s ease-in-out infinite;">◈</span>
+      <input type="range" id="histOpacitySlider" min="0.05" max="1" step="0.05" value="0.92" style="width:60px;height:4px;cursor:pointer;accent-color:var(--teal);opacity:0;transition:opacity .25s;position:absolute;right:40px;">
+      <button onclick="document.getElementById('historyPanel').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;line-height:1;pointer-events:auto;">✕</button>
+    </div>
   </div>
   <div id="historyList"></div>
 </div>
+
 
 <!-- Emoji overlay -->
 <div id="emojiOverlay"></div>
@@ -3468,8 +3473,67 @@ statsBtn.onclick = e=>{ e.stopPropagation(); statsOverlay.classList.toggle("open
 histBtn.onclick = e=>{
   e.stopPropagation();
   const panel = document.getElementById("historyPanel");
-  panel.style.display = panel.style.display === "none" ? "block" : "none";
+  const isHidden = panel.style.display === "none";
+  panel.style.display = isHidden ? "block" : "none";
+  if(isHidden){
+    const histList = document.getElementById("historyList");
+    if(histList) histList.scrollTop = histList.scrollHeight;
+  }
 };
+
+// History panel drag (csak laptopon)
+(()=>{
+  const panel = document.getElementById("historyPanel");
+  const head  = document.getElementById("historyPanelHead");
+  const slider = document.getElementById("histOpacitySlider");
+  const hint   = document.getElementById("histSliderHint");
+  if(!panel||!head) return;
+
+  // Átlátszóság csúszka
+  head.addEventListener("mouseenter",()=>{
+    slider.style.opacity="1";
+    if(hint) hint.style.opacity="0";
+  });
+  head.addEventListener("mouseleave",()=>{
+    slider.style.opacity="0";
+    if(hint) hint.style.opacity="1";
+  });
+  slider.addEventListener("input", e=>{
+    const val = parseFloat(e.target.value);
+    panel.style.background = `rgba(13,20,32,${val})`;
+    panel.style.backdropFilter = val < 0.2 ? "none" : "blur(10px)";
+  });
+
+  // Drag — csak laptopon
+  let dragging=false, startX=0, startY=0, origX=0, origY=0;
+  head.addEventListener("pointerdown", e=>{
+    if(window.innerWidth < 720) return;
+    if(e.target === slider || e.target.tagName === "BUTTON") return;
+    dragging = true;
+    head.style.cursor = "grabbing";
+    const rect = panel.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    origX  = rect.left;
+    origY  = rect.top;
+    panel.style.transition = "none";
+    panel.style.left   = origX+"px";
+    panel.style.bottom = "auto";
+    panel.style.top    = origY+"px";
+    head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener("pointermove", e=>{
+    if(!dragging || window.innerWidth < 720) return;
+    panel.style.left = (origX + e.clientX - startX)+"px";
+    panel.style.top  = (origY + e.clientY - startY)+"px";
+  });
+  head.addEventListener("pointerup", ()=>{
+    if(!dragging) return;
+    dragging = false;
+    head.style.cursor = window.innerWidth >= 720 ? "grab" : "default";
+    panel.style.transition = "";
+  });
+})();
 
 
 
