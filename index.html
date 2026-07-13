@@ -2117,7 +2117,6 @@ function setupDataChannel(dc, peerId){
 
   dc.onopen = ()=>{
     console.log("[DC] open, peerId:", peerId);
-    // Ha nincsen kulcsunk még, generálunk
     if(!e2eeCryptoKey){
       generateE2eeKey().then(()=> sendE2eeKey(peerId));
     } else {
@@ -2130,30 +2129,24 @@ function setupDataChannel(dc, peerId){
       let msg;
       try { msg = JSON.parse(e.data); } catch(_){ return; }
 
-      // E2EE kulcs csere
       if(msg.type === "e2ee-key"){
-  // Ha már van kulcsunk ettől a peertől, ne csináljunk semmit (loop megelőzés)
-  if(e2eePeerKeys.has(peerId)){
-    return;
-  }
-  try{
-    const peerKey = await importKeyFromBase64(msg.key);
-    e2eePeerKeys.set(peerId, peerKey);
-    // Csak akkor küldünk vissza kulcsot, ha mi még nem küldtünk
-    if(!e2eeCryptoKey){
-      await generateE2eeKey();
-      await sendE2eeKey(peerId);
-    }
-    e2eeReady = true;
-    statE2ee.textContent = t("e2eeActive");
-    console.log("[E2EE] kulcs csere kész, peerId:", peerId);
-  }catch(err){
-    console.warn("[E2EE] kulcs import hiba:", err);
-  }
-  return;
-}
+        if(e2eePeerKeys.has(peerId)) return;
+        try{
+          const peerKey = await importKeyFromBase64(msg.key);
+          e2eePeerKeys.set(peerId, peerKey);
+          if(!e2eeCryptoKey){
+            await generateE2eeKey();
+            await sendE2eeKey(peerId);
+          }
+          e2eeReady = true;
+          statE2ee.textContent = t("e2eeActive");
+          console.log("[E2EE] kulcs csere kész, peerId:", peerId);
+        }catch(err){
+          console.warn("[E2EE] kulcs import hiba:", err);
+        }
+        return;
+      }
 
-      // Titkosított chat üzenet
       if(msg.type === "e2ee-chat"){
         const peerKey = e2eePeerKeys.get(peerId);
         if(!peerKey){ console.warn("[E2EE] nincs kulcs a fejtéshez"); return; }
@@ -2164,19 +2157,16 @@ function setupDataChannel(dc, peerId){
           const translated = await translateText(chatData.text, chatData.sourceLang||"hu", myLang);
           const sub = (chatData.sourceLang && chatData.sourceLang!==myLang)
             ? `original: „${chatData.text}"` : "";
+          chatPanel.classList.add("open");
           addChatBubble(translated, sub, false, nowTime());
-          // Supabase mentés
           saveChatToSupabase(chatData.text, chatData.sourceLang, false);
         }catch(_){}
         return;
       }
 
-      // Fájl metaadatok
-// Fájl metaadatok
       if(msg.type === "file-meta"){
         incomingMeta = msg;
         incomingChunks = [];
-        // Progress buborék létrehozása fogadó oldalon
         const wrap = document.createElement("div");
         wrap.className = "msg";
         wrap.id = "incoming-file-"+peerId;
@@ -2201,16 +2191,14 @@ function setupDataChannel(dc, peerId){
       } else if(msg.type === "file-end" && incomingMeta){
         const blob = new Blob(incomingChunks, {type: incomingMeta.mime||"application/octet-stream"});
         const url = URL.createObjectURL(blob);
-        // Régi progress buborék eltávolítása
         const oldWrap = document.getElementById("incoming-file-"+peerId);
         if(oldWrap) oldWrap.remove();
-        // Végleges buborék megjelenítése
         const detectedImage = incomingMeta.isImage || /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(incomingMeta.name);
         addFileBubble(incomingMeta.name, incomingMeta.size, url, false, detectedImage);
         incomingMeta = null;
         incomingChunks = [];
       }
-} else if(e.data instanceof ArrayBuffer){
+    } else if(e.data instanceof ArrayBuffer){
       incomingChunks.push(e.data);
       if(incomingMeta){
         const received = incomingChunks.reduce((s,c)=>s+c.byteLength, 0);
@@ -2225,6 +2213,7 @@ function setupDataChannel(dc, peerId){
 
   dc.onerror = err=>{ console.warn("[DC] hiba:", err); };
 }
+
 
 /* =========================================================================
    SUPABASE CSATORNA — MULTI-PEER JELZÉS
@@ -2955,12 +2944,12 @@ function addFileBubble(name, size, url, isMe, isImage){
 // Fallback broadcast chat (ha nincs E2EE DataChannel, pl. 3. fél)
 async function handleIncomingChatBroadcast(payload){
   if(!payload?.text) return;
-  // Csak akkor használjuk ha nincs DataChannel alapú titkosított chat
-  if(e2eeReady) return; // DataChannel kezeli
+  if(e2eeReady) return;
   try{
     const translated = await translateText(payload.text, payload.sourceLang||"hu", myLang);
     const sub = (payload.sourceLang&&payload.sourceLang!==myLang)
       ? `original: „${payload.text}"`:"";
+    chatPanel.classList.add("open");
     addChatBubble(translated, sub, false, nowTime());
   }catch(e){ console.error(e); }
 }
