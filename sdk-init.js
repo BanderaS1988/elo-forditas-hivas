@@ -40,28 +40,6 @@
       console.log("[sdk-init] ✅ NoiseCancellation kész");
     } catch(e) { console.error("[sdk-init] ❌ NoiseCancellation:", e.message); }
 
-    // 3. Analytics
-    try {
-      _analytics = new window.Analytics(ctx.sb);
-      _analytics.init(
-        ctx.roomId,
-        ctx.peerId,
-        () => { const f = window.peers?.values().next().value; return f?.pc || null; },
-        (result) => {
-          const mosEl = document.getElementById("statMos");
-          if (mosEl) {
-            mosEl.textContent = result.mos + " (" + result.quality + ")";
-            mosEl.style.color =
-              result.quality === "Kiváló" || result.quality === "Jó" ? "var(--green)"
-              : result.quality === "Elfogadható" ? "var(--amber)"
-              : "var(--danger)";
-          }
-        }
-      );
-      _analytics.start();
-      console.log("[sdk-init] ✅ Analytics kész");
-    } catch(e) { console.error("[sdk-init] ❌ Analytics:", e.message); }
-
     // 4. TranslationFeedback
     try {
       _translationFeedback = new window.TranslationFeedback(ctx.sb);
@@ -244,7 +222,6 @@
 
 
 
-    try { _analytics?.stop(); } catch(_) {}
     try { _networkAdaptation?.stop(); } catch(_) {}
     try { _noiseCancellation?.destroy(); } catch(_) {}
 
@@ -257,7 +234,6 @@
     _analytics           = null;
     _translationFeedback = null;
     _networkAdaptation   = null;
-    _webhookManager      = null;
     _gdprManager         = null;
 
     console.log("[sdk-init] ✅ Cleanup kész");
