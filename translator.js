@@ -26,7 +26,7 @@ const GROQ_RESTORED_MESSAGES = {
 
 // ─── FŐ OSZTÁLY ───────────────────────────────────────────────────────────────
 
-export class TranslatorEngine {
+class TranslatorEngine {
   constructor({ onStatusChange, onKeyUpdate, getCurrentLang }) {
     /** @type {Array<{key:string,label:string,used:number,limit:number,exhausted:boolean,lastError:string|null}>} */
     this._keys             = [];
@@ -560,24 +560,23 @@ if (data.reset_date !== today) {
 }
 
 _getCache(key) {
-  // Először memória cache
-  if (this._cache.has(key)) {
-    return this._cache.get(key);
-  }
-  // Aztán localStorage cache
-  try {
-    const raw = localStorage.getItem("lt_translate_cache");
-    if (!raw) return undefined;
-    const obj = JSON.parse(raw);
-    if (obj[key] !== undefined) {
-      // Visszatöltjük memóriába is
-      this._cache.set(key, obj[key]);
-      return obj[key];
+    if (this._cache.has(key)) {
+      return this._cache.get(key);
     }
-  } catch(e) {
-    console.warn("[Translator] localStorage cache olvasási hiba:", e);
+    try {
+      const raw = localStorage.getItem("lt_translate_cache");
+      if (!raw) return undefined;
+      const obj = JSON.parse(raw);
+      if (obj[key] !== undefined) {
+        this._cache.set(key, obj[key]);
+        return obj[key];
+      }
+    } catch(e) {
+      console.warn("[Translator] localStorage cache olvasási hiba:", e);
+    }
+    return undefined;
   }
-  return undefined;
-}
 
 }
+
+window.TranslatorEngine = TranslatorEngine;
