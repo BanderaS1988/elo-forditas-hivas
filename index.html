@@ -595,13 +595,46 @@ select{
       </button>
     </div>
 
-    <!-- Híváslink mező -->
+        <!-- Híváslink mező -->
     <div id="shareLinkBox">
       <div class="link-label" data-i18n="shareLinkLabel">Megosztható link</div>
       <div class="link-row">
         <input class="link-input" type="text" id="shareLinkInput" readonly>
         <button class="link-copy-btn" id="linkCopyBtn" data-i18n="btnCopy">Másolás</button>
         <button class="link-share-btn" id="linkShareBtn" title="Megosztás">📤</button>
+      </div>
+    </div>
+
+    <!-- ── WIDGET BEÁGYAZÁSI KÓD ── -->
+    <div id="widgetBox" style="display:none; margin-top:14px; padding:14px 16px; 
+      background:var(--panel-2); border-radius:14px; border:1px solid var(--line);">
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:13px; font-weight:700; color:var(--text);">
+          🔌 Beágyazható widget
+        </span>
+        <button onclick="document.getElementById('widgetBox').style.display='none'" 
+          style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:16px; padding:0 4px;">✕</button>
+      </div>
+      
+      <div style="font-size:12px; color:var(--text-dim); margin-bottom:8px;">
+        Illeszd be ezt a kódot a weboldaladba:
+      </div>
+      
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <input id="embedCodeInput" type="text" readonly 
+          style="flex:1; min-width:150px; padding:8px 12px; border-radius:8px; border:1px solid var(--line);
+            background:var(--panel); color:var(--text); font-size:11px; font-family:monospace;"
+          value='<livecall-widget color="#4fd1c5" lang="hu" btn-text="Hívás indítása"></livecall-widget>'>
+        <button onclick="copyEmbedCode()" 
+          style="padding:8px 14px; border-radius:8px; border:none; background:var(--teal);
+            color:#08221f; font-weight:700; cursor:pointer; font-size:12px; flex-shrink:0;">
+          📋 Másolás
+        </button>
+      </div>
+      
+      <div style="font-size:11px; color:var(--text-dim); margin-top:6px;">
+        ⚠️ A widget működéséhez a <code>livecall-sdk.js</code> betöltése szükséges.
       </div>
     </div>
 
@@ -4519,72 +4552,43 @@ document.addEventListener("click",e=>{
   }
 });
 
-/* ── HANGUP MODAL ── */
-hangupBtn.onclick         = ()=> hangupModal.classList.add("open");
-modalCancelBtn.onclick    = ()=> hangupModal.classList.remove("open");
-modalConfirmBtn.onclick   = ()=> doHangup();
-hangupModal.addEventListener("click",e=>{ if(e.target===hangupModal) hangupModal.classList.remove("open"); });
-
-/* =========================================================================
-   SERVICE WORKER
-   ========================================================================= */
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js")
-      .then(()=>console.log("SW registered"))
-      .catch(e=>console.warn("SW hiba:",e));
-  });
-}
 </script>
 
-
-
-
-
-
 <script>
-// ─── TOAST ÉRTESÍTÉSEK ──────────────────────────────────────────
-function showToast(message, type = 'info', duration = 4000) {
-  let container = document.getElementById('toastContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toastContainer';
-    container.style.cssText = `
-      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-      z-index: 999; display: flex; flex-direction: column; gap: 8px;
-      pointer-events: none; max-width: 90%;
-    `;
-    document.body.appendChild(container);
+// ─── WIDGET ─────────────────────────────────────────────────────
+function showWidgetBox() {
+  const box = document.getElementById('widgetBox');
+  if (box) {
+    box.style.display = 'block';
+    const input = document.getElementById('embedCodeInput');
+    if (input && window.myLang) {
+      const lang = window.myLang || 'hu';
+      input.value = `<livecall-widget color="#4fd1c5" lang="${lang}" btn-text="Hívás indítása"></livecall-widget>`;
+    }
   }
-  
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    background: rgba(13,20,32,.92);
-    backdrop-filter: blur(12px);
-    border: 1px solid ${type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--green)' : type === 'warn' ? 'var(--amber)' : 'var(--teal)'};
-    border-radius: 12px;
-    padding: 10px 18px;
-    font-size: 13px;
-    color: var(--text);
-    box-shadow: 0 8px 30px rgba(0,0,0,.5);
-    animation: toastSlideUp .4s ease;
-    pointer-events: auto;
-    text-align: center;
-    max-width: 400px;
-  `;
-  toast.textContent = message;
-  container.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transition = 'opacity .3s';
-    setTimeout(() => toast.remove(), 300);
-  }, duration);
 }
 
-window.showToast = showToast;
+function copyEmbedCode() {
+  const input = document.getElementById('embedCodeInput');
+  if (!input) return;
+  const code = input.value;
+  navigator.clipboard.writeText(code)
+    .then(() => {
+      const btn = document.querySelector('#widgetBox button:last-child');
+      if (btn) {
+        const origText = btn.textContent;
+        btn.textContent = '✅';
+        setTimeout(() => { btn.textContent = origText; }, 2000);
+      }
+      showToast('✅ Beágyazási kód másolva!', 'success', 2000);
+    })
+    .catch(() => {
+      input.select();
+      document.execCommand('copy');
+      showToast('✅ Beágyazási kód másolva!', 'success', 2000);
+    });
+}
 
-// ─── GDPR ADATVÉDELEM ───────────────────────────────────────────
 // ─── TOAST ÉRTESÍTÉSEK ──────────────────────────────────────────
 window.showToast = function(message, type = 'info', duration = 4000) {
   let container = document.getElementById('toastContainer');
@@ -4598,7 +4602,6 @@ window.showToast = function(message, type = 'info', duration = 4000) {
     `;
     document.body.appendChild(container);
   }
-  
   const toast = document.createElement('div');
   toast.style.cssText = `
     background: rgba(13,20,32,.92);
@@ -4616,7 +4619,6 @@ window.showToast = function(message, type = 'info', duration = 4000) {
   `;
   toast.textContent = message;
   container.appendChild(toast);
-  
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transition = 'opacity .3s';
@@ -4627,63 +4629,55 @@ window.showToast = function(message, type = 'info', duration = 4000) {
 // ─── GDPR ADATVÉDELEM ───────────────────────────────────────────
 async function exportMyData() {
   if (!window._gdprManager) {
-    showToast(t('gdprError'), 'error');
+    window.showToast(window.t('gdprError'), 'error');
     return;
   }
-  
   const roomId = window.roomId;
   if (!roomId) {
-    showToast(t('gdprNoCall'), 'error');
+    window.showToast(window.t('gdprNoCall'), 'error');
     return;
   }
-  
-  showToast(t('gdprExporting'), 'info', 2000);
-  
+  window.showToast(window.t('gdprExporting'), 'info', 2000);
   try {
     const result = await window._gdprManager.exportRoomData(roomId);
     if (result && Object.keys(result).length > 0) {
-      showToast(t('gdprExportSuccess'), 'success', 3000);
+      window.showToast(window.t('gdprExportSuccess'), 'success', 3000);
     } else {
-      showToast(t('gdprNoData'), 'warn', 3000);
+      window.showToast(window.t('gdprNoData'), 'warn', 3000);
     }
   } catch (e) {
-    showToast(t('gdprExportError') + e.message, 'error');
+    window.showToast(window.t('gdprExportError') + e.message, 'error');
     console.error('[GDPR] Export hiba:', e);
   }
 }
 
 async function deleteMyData() {
   if (!window._gdprManager) {
-    showToast(t('gdprError'), 'error');
+    window.showToast(window.t('gdprError'), 'error');
     return;
   }
-  
   const roomId = window.roomId;
   if (!roomId) {
-    showToast(t('gdprNoCall'), 'error');
+    window.showToast(window.t('gdprNoCall'), 'error');
     return;
   }
-  
-  if (!confirm(t('gdprConfirm'))) return;
-  
-  showToast(t('gdprDeleting'), 'info', 2000);
-  
+  if (!confirm(window.t('gdprConfirm'))) return;
+  window.showToast(window.t('gdprDeleting'), 'info', 2000);
   try {
     const result = await window._gdprManager.deleteRoomData(roomId);
     if (result && result.success) {
-      showToast(t('gdprDeleteSuccess'), 'success', 3000);
+      window.showToast(window.t('gdprDeleteSuccess'), 'success', 3000);
       document.getElementById('gdprPanel').style.display = 'none';
     } else {
-      showToast(t('gdprDeleteError'), 'error');
+      window.showToast(window.t('gdprDeleteError'), 'error');
       console.error('[GDPR] Törlés eredmény:', result);
     }
   } catch (e) {
-    showToast(t('gdprDeleteError'), 'error');
+    window.showToast(window.t('gdprDeleteError'), 'error');
     console.error('[GDPR] Törlés hiba:', e);
   }
 }
 
-// GDPR panel megjelenítése
 function showGdprPanel() {
   const panel = document.getElementById('gdprPanel');
   if (panel) {
@@ -4701,12 +4695,10 @@ window.exportMyData = exportMyData;
 window.deleteMyData = deleteMyData;
 window.showGdprPanel = showGdprPanel;
 
-// GDPR gomb hozzáadása
 function addGdprButton() {
   const controls = document.querySelector('.controls');
   if (!controls) return;
   if (document.getElementById('gdprBtn')) return;
-  
   const btn = document.createElement('button');
   btn.className = 'ctrl-btn';
   btn.id = 'gdprBtn';
@@ -4718,7 +4710,6 @@ function addGdprButton() {
       panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     }
   };
-  
   const hangupBtn = document.getElementById('hangupBtn');
   if (hangupBtn) {
     controls.insertBefore(btn, hangupBtn);
@@ -4739,8 +4730,6 @@ if (originalBeginCall) {
 if (document.getElementById('call')?.classList.contains('active')) {
   setTimeout(addGdprButton, 1500);
 }
-
-
 </script>
 <script src="sdk-init.js"></script>
 </body>
