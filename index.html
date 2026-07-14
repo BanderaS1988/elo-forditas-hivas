@@ -1316,24 +1316,9 @@ const I18N = {
   },
 };
 
-  // ─── GLOBÁLIS VÁLTOZÓK ───
+  
 
-const _sessionId = Math.random().toString(36).slice(2,10);
-const _platform = navigator.userAgent.slice(0,80);
 
-async function dbLog(event, detail){
-  try{
-    if(!window.supabaseClient) return;
-    await window.supabaseClient.from("debug_logs").insert({
-      session_id: _sessionId,
-      event: event,
-      detail: String(detail||""),
-      platform: _platform,
-    });
-  }catch(e){
-    console.warn("[dbLog hiba]", e);
-  }
-}
 
 
 const translateCache = new Map();
@@ -1529,10 +1514,8 @@ let fallbackActive = false;
 window._livekitRoom = null; // debug célra
 
 async function connectToLiveKit() {
-  await dbLog("livekit_start", "szoba: " + roomId + " felhasználó: " + myName);
   try {
     const token = await generateLiveKitToken(roomId, myName);
-    await dbLog("livekit_token_ok", "token megvan");
 
     livekitRoom = new LivekitClient.Room({
       audioCaptureDefaults: {
@@ -1544,7 +1527,6 @@ async function connectToLiveKit() {
     });
 
     livekitRoom.on("disconnected", async (reason) => {
-      await dbLog("livekit_disconnected", String(reason || ""));
       livekitActive = false;
       livekitConnected = false;
       if (!callEnded && !fallbackActive) {
@@ -1554,26 +1536,26 @@ async function connectToLiveKit() {
     });
 
     livekitRoom.on("reconnecting", () => {
-      dbLog("livekit_reconnecting", "");
+
       setNetStatus("warn");
     });
 
     livekitRoom.on("reconnected", () => {
-      dbLog("livekit_reconnected", "");
+      
       livekitConnected = true;
       setNetStatus("good");
     });
 
     livekitRoom.on("participantConnected", (participant) => {
-      dbLog("livekit_participant_connected", participant.identity);
+      
     });
 
     livekitRoom.on("participantDisconnected", (participant) => {
-      dbLog("livekit_participant_disconnected", participant.identity);
+      
     });
 
     livekitRoom.on("trackSubscribed", (track, publication, participant) => {
-      dbLog("livekit_trackSubscribed", "kind: " + track.kind + " participant: " + participant.identity);
+     
       if (!livekitActive) return;
       if (track.kind === "video") {
         const mediaStream = new MediaStream([track.mediaStreamTrack]);
@@ -1594,38 +1576,36 @@ async function connectToLiveKit() {
     });
 
     livekitRoom.on("connectionStateChanged", (state) => {
-      dbLog("livekit_connectionStateChanged", state);
+      
     });
 
     await livekitRoom.connect(LIVEKIT_URL, token);
     livekitConnected = true;
     livekitActive = true;
-    await dbLog("livekit_connected_ok", "kapcsolat sikeres");
 
     if (localStream) {
       for (const track of localStream.getTracks()) {
         try {
-          await dbLog("livekit_publishTrack_before", "kind: " + track.kind);
+          
           await livekitRoom.localParticipant.publishTrack(track, {
             ...(track.kind === "audio" ? {
               audioBitrate: 32000,
               dtx: true,
             } : {})
           });
-          await dbLog("livekit_publishTrack_after", "kind: " + track.kind + " SIKERES");
+          
         } catch (e) {
-          await dbLog("livekit_publishTrack_ERROR", "kind: " + track.kind + " hiba: " + (e.message || String(e)));
+         
           console.warn("⚠️ Track publikálási hiba:", track.kind, e);
         }
       }
     } else {
-      await dbLog("livekit_no_localStream", "nincs localStream!");
     }
 
     setNetStatus("good");
 
   } catch (error) {
-    await dbLog("livekit_ERROR", error.message || String(error));
+   
     console.error("❌ LiveKit kapcsolati hiba:", error.message || error);
     livekitActive = false;
     livekitConnected = false;
@@ -1645,7 +1625,7 @@ async function activateWebRTCFallback() {
   fallbackActive = true;
   livekitActive = false;
 
-  await dbLog("webrtc_fallback_start", "WebRTC fallback indul");
+  
   console.log("🔄 WebRTC fallback indul...");
 
   // LiveKit szoba lezárása ha még él
@@ -1663,7 +1643,7 @@ async function activateWebRTCFallback() {
 
   // Ha már vannak WebRTC peer kapcsolatok, csak a streamet állítjuk vissza
   if (peers.size > 0) {
-    await dbLog("webrtc_fallback_peers_exist", "peer kapcsolatok már aktívak: " + peers.size);
+   
     console.log("✅ WebRTC peer kapcsolatok már aktívak");
 
     // Saját stream újraindítása ha a trackok leálltak
@@ -1680,7 +1660,7 @@ async function activateWebRTCFallback() {
           });
         });
       } catch(e) {
-        await dbLog("webrtc_fallback_media_ERROR", e.message || String(e));
+
         console.error("❌ Stream újraindítás hiba:", e);
       }
     }
@@ -1709,12 +1689,11 @@ async function activateWebRTCFallback() {
 
     setNetStatus("good");
     showStatusBanner("restored", "Kapcsolat helyreállt");
-    await dbLog("webrtc_fallback_stream_restored", "stream visszaállítva");
+    
     return;
   }
 
   // Nincs még peer — WebRTC tárgyalás indítása a Supabase csatornán keresztül
-  await dbLog("webrtc_fallback_no_peers", "nincs peer, presence újraküldés");
   console.log("📡 WebRTC peer újraépítés indul...");
   setNetStatus("bad");
 
@@ -1727,15 +1706,15 @@ async function activateWebRTCFallback() {
         initiator: isInitiator,
         fallback: true,
       });
-      await dbLog("webrtc_fallback_presence_sent", "presence újraküldve");
+     
       console.log("✅ Presence újraküldve, WebRTC tárgyalás indul...");
     } else {
-      await dbLog("webrtc_fallback_no_channel", "nincs csatorna, újracsatlakozás");
+     
       console.warn("⚠️ Nincs aktív Supabase csatorna, újracsatlakozás...");
       await setupChannel(roomId);
     }
   } catch (e) {
-    await dbLog("webrtc_fallback_ERROR", e.message || String(e));
+    
     console.error("❌ WebRTC fallback hiba:", e);
     setNetStatus("bad");
   }
@@ -2623,10 +2602,9 @@ function startStatsLoop(){
    MÉDIAKEZELÉS
    ========================================================================= */
 async function initMedia(){
-  await dbLog("initMedia_start", "indul");
+  
   try{
     const devices = await navigator.mediaDevices.enumerateDevices();
-    await dbLog("initMedia_devices", "eszközök száma: "+devices.length);
     const cameras = devices.filter(d=>d.kind==="videoinput");
     const preferred = cameras.find(d=>
       d.label.toLowerCase().includes("integrated")||
@@ -2636,7 +2614,6 @@ async function initMedia(){
     const videoConstraint = preferred
       ? {deviceId:{exact:preferred.deviceId}}
       : {facingMode:"user"};
-    await dbLog("initMedia_getUserMedia", "indul, videoConstraint: "+JSON.stringify(videoConstraint));
     
     // MOBILON NEM KÉRÜNK AUDIO TRACK-ET, HOGY A SPEECHRECOGNITION HASZNÁLHASSA A MIKROFONT
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -2645,7 +2622,6 @@ async function initMedia(){
     if (isMobile) {
       // Mobilon: NINCS audio track a getUserMedia-ben
       audioConstraint = false;
-      await dbLog("initMedia_mobile_audio_off", "Mobil: audio track NEM kérve, SpeechRecognition fogja használni a mikrofont");
     } else {
       // Laptopon: audio track bekapcsolva
       audioConstraint = {
@@ -2655,27 +2631,22 @@ async function initMedia(){
         channelCount: 1,
         sampleRate: 16000,
       };
-      await dbLog("initMedia_desktop_audio_on", "Laptop: audio track kérve");
     }
     
     localStream = await navigator.mediaDevices.getUserMedia({
       video: videoConstraint,
       audio: audioConstraint
     });
-    await dbLog("initMedia_stream_ok", "audio trackok: "+localStream.getAudioTracks().length+" video trackok: "+localStream.getVideoTracks().length);
     localVideo.srcObject = localStream;
     splitLocalVideo.srcObject = localStream;
     window._localStream = localStream;
 
     const audioTrack = localStream.getAudioTracks()[0];
     if(audioTrack){
-      await dbLog("initMedia_audioTrack", "label: "+audioTrack.label+" readyState: "+audioTrack.readyState);
       window._sharedAudioContext = new AudioContext();
       window._sharedAudioSource = window._sharedAudioContext.createMediaStreamSource(localStream);
       window._sharedMicStream = localStream;
-      await dbLog("initMedia_audioContext", "state: "+window._sharedAudioContext.state);
     } else {
-      await dbLog("initMedia_audioTrack_MISSING", "nincs audio track!");
       // Mobilon ez normális, mert nem kértünk audio track-et
       if (!isMobile) {
         console.warn("⚠️ Nincs audio track (laptop)");
@@ -2684,7 +2655,6 @@ async function initMedia(){
       }
     }
   }catch(err){
-    await dbLog("initMedia_ERROR", err.message||String(err));
     console.error("Média hiba:", err);
     setupStatus.textContent = t("errPerm");
     throw err;
@@ -2696,22 +2666,18 @@ async function initMedia(){
    HANGFELISMERÉS (STT)
    ========================================================================= */
 function startRecognition(){
-  dbLog("STT_startRecognition_called", "micOn: "+micOn+" callEnded: "+callEnded);
   if(!micOn || callEnded) { 
-    dbLog("STT_startRecognition_BLOCKED", "micOn: "+micOn+" callEnded: "+callEnded); 
     return; 
   }
   
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SR){ 
-    dbLog("STT_NO_API", "SpeechRecognition nem támogatott"); 
     console.warn("Web Speech API nem támogatott"); 
     return; 
   }
 
   recognitionShouldRun = true;
   if(recognition){ 
-    dbLog("STT_already_running", "már fut, skip"); 
     return; 
   }
 
@@ -2720,13 +2686,10 @@ function startRecognition(){
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   async function createAndStart(){
-    dbLog("STT_createAndStart_called", "recognitionShouldRun: "+recognitionShouldRun+" micOn: "+micOn+" callEnded: "+callEnded+" isStarting: "+isStarting+" recognition: "+(recognition?"van":"null"));
     if(!recognitionShouldRun || !micOn || callEnded) { 
-      dbLog("STT_createAndStart_BLOCKED","feltétel nem teljesül"); 
       return; 
     }
     if(isStarting || recognition) { 
-      dbLog("STT_createAndStart_SKIP","isStarting vagy recognition már van"); 
       return; 
     }
     isStarting = true;
@@ -2734,13 +2697,10 @@ function startRecognition(){
     // Csak asztali gépen használjuk az AudioContext-et
     if (!isAndroid && window._sharedAudioContext) {
       try{
-        dbLog("STT_audioContext_state_before_resume", window._sharedAudioContext.state);
         if(window._sharedAudioContext.state === "suspended"){
           await window._sharedAudioContext.resume();
-          dbLog("STT_audioContext_resumed", window._sharedAudioContext.state);
         }
       }catch(e){
-        dbLog("STT_audioContext_resume_ERROR", e.message||String(e));
         console.warn("[STT] AudioContext resume hiba:", e.message);
       }
     }
@@ -2750,13 +2710,13 @@ function startRecognition(){
     r.continuous = false;
     r.interimResults = true;
     r.maxAlternatives = 1;
-    dbLog("STT_recognition_created", "lang: "+r.lang);
+   
 
     r.onstart = ()=>{
       isStarting = false;
       noSpeechStreak = 0;
       micBtn.style.outline = "2px solid var(--teal)";
-      dbLog("STT_onstart", "STT aktív, lang: "+r.lang);
+      
       console.log("[STT] Start:", r.lang, isAndroid ? "(Android)" : "(Desktop)");
     };
 
@@ -2773,7 +2733,7 @@ if(!isLaptop()) ownBox.style.display = "block";
         }
       }
     if(final.trim()){
-        dbLog("STT_onresult_final", final.trim().slice(0,100));
+        
         console.log("[STT] Eredmény:", final.trim());
         if(!isLaptop()) ownBox.style.display = "block";
         ownMain.textContent = final.trim();
@@ -2812,19 +2772,18 @@ if(!isLaptop()) ownBox.style.display = "block";
         addHistoryItem(final.trim(), "", true);
         setTimeout(()=>{ ownBox.style.display="none"; setSplitOwnCaption(""); }, 2000);
       } else {
-        dbLog("STT_onresult_interim", "interim result, nem final");
+        
       }
     };
 
     r.onerror = e=>{
-      dbLog("STT_onerror", "error: "+e.error+" message: "+(e.message||""));
       micBtn.style.outline = "";
       isStarting = false;
       recognition = null;
 
       if(e.error === "not-allowed" || e.error === "service-not-allowed"){
         recognitionShouldRun = false;
-        dbLog("STT_onerror_PERMISSION_DENIED", "leállítás");
+        
         console.warn("[STT] Engedély megtagadva, leállítás.");
         if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){
           micOn = false;
@@ -2835,10 +2794,8 @@ if(!isLaptop()) ownBox.style.display = "block";
         return;
       }
 
-      if(e.error === "aborted"){ dbLog("STT_onerror_aborted","újraindítás skip"); return; }
 
       if(e.error === "audio-capture"){
-        dbLog("STT_onerror_audio_capture", "audio-capture hiba — 1.5s várakozás");
         console.warn("[STT] audio-capture hiba — várunk 1.5s...");
         if(recognitionShouldRun && micOn && !callEnded) setTimeout(createAndStart, 1500);
         return;
@@ -2846,7 +2803,6 @@ if(!isLaptop()) ownBox.style.display = "block";
 
       if(e.error === "no-speech"){
         noSpeechStreak++;
-        dbLog("STT_onerror_no_speech", "streak: "+noSpeechStreak);
         console.log("[STT] no-speech #"+noSpeechStreak);
         const delay = isAndroid && noSpeechStreak > 3 ? 800 : 100;
         if(recognitionShouldRun && micOn && !callEnded) setTimeout(createAndStart, delay);
@@ -2854,19 +2810,16 @@ if(!isLaptop()) ownBox.style.display = "block";
       }
 
       if(e.error === "network"){
-        dbLog("STT_onerror_network", "3s várakozás");
         console.warn("[STT] Hálózati hiba, 3s várakozás...");
         if(recognitionShouldRun && micOn && !callEnded) setTimeout(createAndStart, 3000);
         return;
       }
 
-      dbLog("STT_onerror_egyeb", "error: "+e.error);
       console.warn("[STT] Hiba:", e.error);
       if(recognitionShouldRun && micOn && !callEnded) setTimeout(createAndStart, 1000);
     };
 
     r.onend = ()=>{
-      dbLog("STT_onend", "shouldRun: "+recognitionShouldRun+" micOn: "+micOn+" callEnded: "+callEnded);
       micBtn.style.outline = "";
       isStarting = false;
       recognition = null;
@@ -2880,10 +2833,8 @@ if(!isLaptop()) ownBox.style.display = "block";
     recognition = r;
     try{
       r.start();
-      dbLog("STT_start_called", "recognition.start() meghívva");
       console.log("[STT] start() meghívva");
     }catch(e){
-      dbLog("STT_start_ERROR", e.message||String(e));
       console.warn("[STT] start() hiba:", e.message);
       recognition = null;
       isStarting = false;
@@ -2892,7 +2843,6 @@ if(!isLaptop()) ownBox.style.display = "block";
   }
 
   if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !window._userInteracted) {
-    dbLog("STT_mobile_waiting_for_tap", "Mobil: várunk egy érintésre a mikrofon gombon");
     window._userInteracted = true;
     createAndStart();
   } else {
@@ -3680,7 +3630,6 @@ async function beginCallFlow(){
     }
 
   } catch(err) {
-    await dbLog("beginCallFlow_ERROR", err.message || String(err));
     console.error("❌ beginCallFlow hiba:", err);
     setupStatus.textContent = t("errPerm");
     createRoomBtn.disabled = false;
