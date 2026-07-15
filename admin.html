@@ -507,14 +507,11 @@ async function loadKeys(){
   if(supabaseClient){
     try{
       const { data, error } = await supabaseClient
-        .from("groq_keys")
-        .select("keys")
-        .eq("id", 1)
-        .single();
+  .rpc("get_groq_keys", { admin_token: "LiveCall2026Admin" });
 
-      if(error) throw error;
+if(error) throw error;
 
-      if(data?.keys && Array.isArray(data.keys) && data.keys.length > 0){
+if(data?.keys && Array.isArray(data.keys) && data.keys.length > 0){
         console.log("✅ Supabase loadKeys sikeres:", data.keys.filter(k=>k.key).length, "kulcs.");
         localStorage.setItem(KEYS_KEY, JSON.stringify(data.keys));
         return data.keys.map((k,i)=>({
@@ -682,40 +679,27 @@ $("logoutBtn").onclick=()=>{
 
 async function maybeResetDaily(){
   const today = todayStr();
-
-  // Supabase reset_date ellenőrzés
   if(supabaseClient){
     try{
       const { data, error } = await supabaseClient
-        .from("groq_keys")
-        .select("keys, reset_date")
-        .eq("id", 1)
-        .single();
-
+        .rpc("get_groq_keys", { admin_token: "LiveCall2026Admin" });
       if(error) throw error;
-
       if(data && data.reset_date !== today){
         const keys = (data.keys || []).map(k=>({...k, used:0, lastError:null}));
-        const { error: updateError } = await supabaseClient
-          .from("groq_keys")
-          .update({ keys, reset_date: today, updated_at: new Date().toISOString() })
-          .eq("id", 1);
-        if(updateError) throw updateError;
+        await supabaseClient.rpc("save_groq_keys", {
+          admin_token: "LiveCall2026Admin",
+          keys_data: keys,
+        });
         localStorage.setItem(RESET_KEY, today);
-        addLog("info", `Napi számlálók visszaállítva (Supabase): ${today}`);
+        addLog("info", `Napi számlálók visszaállítva: ${today}`);
         return;
       }
-
-      // Supabase szerint már resetelt ma
       localStorage.setItem(RESET_KEY, today);
       return;
-
     }catch(e){
-      console.warn("maybeResetDaily Supabase hiba:", e?.message || e);
+      console.warn("maybeResetDaily hiba:", e?.message || e);
     }
   }
-
-  // localStorage fallback
   const stored = localStorage.getItem(RESET_KEY);
   if(stored === today) return;
   localStorage.setItem(RESET_KEY, today);
